@@ -1,0 +1,284 @@
+#-------------------------------------
+#Christian Goodman
+#Dr. Halic 
+#Assignment 4 - Term Project
+#12/1/14
+#-------------------------------------
+
+.data 
+getDataType: 	.asciiz "\nSelect (7) For Int, (8) For Floating, (0) For Exit: "
+putDataType: 	.word 4		#Space to store selection from user input 
+getOperation:	.asciiz "Enter the operation: (1)Addition, (2)Subtraction, (3)Multiplication, (4)Division, \n"
+getOperation2:  .asciiz "(5)Modulus, (6)Percentage. "
+putOperation: 	.word 4
+getA:		.asciiz "Enter Value A: \n"
+getB:		.asciiz "Enter Value B: \n"
+valueA:		.word 8		#Space to hold Single Value
+valueB:		.word 8 	#Space to hold a Second Value if needed 
+result:		.float 1.0 
+theAnswer:	.asciiz "The result is: "
+theEnd: 	.asciiz "\nThank you for using the Program, created by Christian Goodman."
+restart: 	.asciiz "\n Would you like to do another calculation 1(Yes), 2(No)?"
+restartAns:	.word 4
+
+#-------------------------------------
+
+.text 
+main: 
+la $a0, getDataType		#Load Address of the Message
+li $v0, 4 			#Load op code, print string 
+syscall				
+la $a0, putDataType		#Load Address to store input
+li $a1, 4			#Buffer Space 
+li $v0, 5			#Load op code, read Integer 
+syscall				 
+move $t1, $v0			#Move read int for data type into t1 register 
+beq  $t1, 0, endMessage		#Quit if 0 is read in 
+# ----
+la $a0, getOperation		#Load Address of the Message
+li $v0, 4			#Load op code, print string 
+syscall				 
+la $a0, getOperation2		#Load Second Message
+li $v0, 4		 	#Load op code, print string
+syscall 			
+la $a0, putOperation		#Load Address to store input
+li $a1, 4			#Buffer Space
+li $v0, 5			#Load op code, read Integer 
+syscall 		 
+move $t2, $v0 			#Move read int for operation into t2 register
+
+beq $t1, 7, intSelection	#if int selected
+beq $t1, 8, floatSelection 	#if float selected 
+
+#----------------------------------------------------------------------------
+intSelection:	#INTEGER
+la $a0, getA			#Read integer value A and B and store into s1, s2 
+li $v0, 4
+syscall 
+la $a0, valueA
+la $a1, 4 
+li $v0, 5
+syscall
+move $s1, $v0
+
+la $a0, getB
+li $v0, 4 
+syscall  
+la $a0, valueB
+la $a1, 4 
+li $v0, 5
+syscall
+move $s2, $v0
+
+move $a1, $s1			#move s1 register into a1 to be passed 
+move $a2, $s2 			#move s2 register into a2 to be passed 
+
+beq $t2, 1, intAddition		#if addition selected			#Essentially a switch statement
+beq $t2, 2, intSubtraction	#if subtraction selected
+beq $t2, 3, intMultiplication	#if multiplication selected
+beq $t2, 4, intDivision		#if division selected
+beq $t2, 5, intModulus		#if modulus seleted
+beq $t2, 6, intPercentage 	#if percentage selected 
+
+
+#---------------------
+floatSelection:	#FLOAT
+la $a0, getA
+li $v0, 4			#Read floating value A and B into f1 and f2 
+syscall 
+la $a0, valueA
+la $a1, 4 
+li $v0, 6
+syscall
+mov.s $f1, $f0  
+
+la $a0, getB
+li $v0, 4 
+syscall  
+la $a0, valueB
+la $a1, 4 
+li $v0, 6
+syscall
+mov.s $f2, $f0
+
+
+beq $t2, 1, floatAddition	#if addition selected
+beq $t2, 2, floatSubtraction	#if subtraction selected
+beq $t2, 3, floatMultiplication	#if multiplication selected
+beq $t2, 4, floatDivision	#if division selected
+beq $t2, 5, floatModulus	#if modulus seleted
+
+#----------------------------------------------------------------------------
+#Below are all required funcitons and setup functions which take 2 arguments and return a value 
+#Register s7 will be used to hold returning value, a1 and a2 hold the passing arguments 
+#-----------------------------		# Int Addition
+intAddition:
+jal intAdditionFunc	
+move $s7, $v0
+j finished 						 
+intAdditionFunc: 				
+add $t0, $a1, $a2
+move $v0, $t0 
+jr $ra
+
+#-----------------------------		# Int Subtraction 
+intSubtraction:
+jal intSubtractionFunc
+move $s7, $v0
+j finished
+
+intSubtractionFunc:
+sub $t0, $a1, $a2
+move $v0, $t0
+jr $ra
+
+#-----------------------------		# Int Multiplicaiton 
+intMultiplication:
+jal intMultiplicationFunc
+move $s7, $v0
+j finished
+
+intMultiplicationFunc:
+mul $t0, $a1, $a2
+move $v0, $t0
+jr $ra 
+
+#-----------------------------		# Int Division 
+intDivision:
+jal intDivisionFunc
+move $s7, $v0 
+j finished 
+
+intDivisionFunc:
+divu $a1, $a2 
+mflo $t0
+move $v0, $t0
+jr $ra 
+
+#-----------------------------		# Int Modulus 
+intModulus:
+jal intModulusFunc
+move $s7, $v0 
+j finished 
+
+intModulusFunc:
+divu $a1, $a2 
+mfhi $t0
+move $v0, $t0 
+jr $ra 
+
+#-----------------------------		# Int Percentage
+intPercentage:
+jal intPercentageFunc
+move $s7, $v0
+j finished
+
+intPercentageFunc:
+li $t5, 100 		#load 100 into t5
+move $t7, $a2 		# t7 = valueB
+div $t0, $t7, $t5	# t0 = valueB / 100 
+move $t7, $a1		# t7 = ValueA 
+mult $t7, $t0 		# lo = valueA * t0 
+mflo $t0		# move lo to t0 
+move $v0, $t0 
+jr $ra 
+#--------------------------------------------------------------	# Floating Functions Below 
+#-----------------------------		# Float Addition
+floatAddition:
+jal floatAdditionFunc
+s.s $f0, result 
+j finished 
+
+floatAdditionFunc:
+add.s $f10,$f1, $f2
+mov.s $f0, $f10
+jr $ra 
+
+#-----------------------------		# Float Subtraction
+floatSubtraction:
+jal floatSubtractionFunc
+s.s $f0, result 
+j finished 
+
+floatSubtractionFunc: 
+sub.s $f10, $f1, $f2
+mov.s $f0, $f10 
+jr $ra 
+
+#-----------------------------		# Float Multiplicaiton 
+floatMultiplication:
+jal floatMultiplicationFunc
+s.s $f0, result
+j finished 
+
+floatMultiplicationFunc:
+mul.s $f10, $f1, $f2 
+mov.s $f0, $f10
+jr $ra 
+
+#-----------------------------		# Float Division
+floatDivision:
+jal floatDivisionFunc
+s.s $f0, result 
+j finished
+
+floatDivisionFunc:
+div.s $f10, $f1, $f2
+mov.s $f0,$f10
+jr $ra 
+
+#-----------------------------		# Float Modulus
+floatModulus:			 
+jal floatModulusFunc
+s.s $f0, result
+j finished 
+
+floatModulusFunc: 
+div.s $f10, $f1, $f2			# f10 = valA / valB
+trunc.w.s $f11, $f10			# Truncate f10 down and store in f11 
+cvt.s.w $f11, $f11			# convert the f11 value to single precision in f11
+sub.s $f12, $f10, $f11 			# f12 = f10 - converted f11 
+mov.s $f0, $f12		
+jr $ra 
+
+#-----------------------------
+finished:
+beq $t1, 7, intAnswer		#-------------------------------|
+beq $t1, 8, floatAnswer 	#-------------------------------|-------|
+				#				|	|
+intAnswer: 			#		<---------------|	| #Print Int Answer
+la $a0, theAnswer		# Load string				|
+li $v0, 4			# OP code, print string			|
+syscall 			#					|
+move $a0, $s7 			# Load result into a0 to be printed	|
+li $v0, 1 			# OP, print int				|
+syscall 			#					|
+j endMessage 			#					|
+				#					|
+floatAnswer: 			#		<-----------<-----------| #Print Float Answer 
+la $a0, theAnswer		# Load String 
+li $v0, 4 			# Print String 
+syscall
+li $v0, 2			# OP, print float 
+l.s $f12, result 		# Load result into f12 register to be printed 
+syscall 			
+j endMessage
+
+#-----------------------------	# Ending statements 
+endMessage:
+la $a0, theEnd 			#Load Address of End Message
+li $v0, 4			#Load op code, print string 
+syscall 			#Execute 
+
+la $a0, restart 
+li $v0, 4 
+syscall 
+la $a0, restartAns
+li $a1, 4
+li $v0, 5
+syscall 
+move $t4, $v0
+beq $t4, 1, main
+
+li $v0, 10			#Load op code, terminate 
+syscall				#Execute 
